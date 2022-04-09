@@ -1,10 +1,8 @@
 import React, {useContext, useEffect, useState} from "react";
 import {
     Avatar,
-    Checkbox,
     Container,
     CssBaseline,
-    FormControlLabel,
     Grid,
     Link,
     makeStyles,
@@ -14,12 +12,9 @@ import Typography from "@material-ui/core/Typography";
 import Button from "@material-ui/core/Button";
 import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import {FirebaseContext, withFirebase} from "../Firebase";
-import Alert from '@material-ui/lab/Alert';
+import Alert from "@material-ui/lab/Alert";
 import {AlertTitle} from "@material-ui/lab";
 import {useHistory, withRouter} from "react-router-dom";
-import {toast, ToastContainer} from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import {withAuthentication} from "../Session";
 
 const useStyles = makeStyles((theme) => ({
     paper: {
@@ -41,19 +36,19 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-function Login(props) {
+function Register(props) {
     const classes = useStyles();
+    const [email, setEmail] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
-    const [disabled, setDisabled] = useState(false);
     const history = useHistory();
 
     useEffect(() => {
-        if(props.firebase.auth.currentUser) {
+        if (props.firebase.auth.currentUser) {
             history.push("/");
         }
-    })
+    });
 
     const onChangeHandler = (event) => {
         const {name, value} = event.currentTarget;
@@ -62,28 +57,34 @@ function Login(props) {
             setUsername(value);
         } else if(name === 'password'){
             setPassword(value);
+        } else if (name === 'email') {
+            setEmail(value);
         }
     };
 
     const onSubmit = (event) => {
         event.preventDefault();
-        setDisabled(true);
+        setError(null);
 
-        props.firebase.doSignInWithEmailAndPassword(username, password).then(userAuth => {
-            history.push("/");
-            toast.success('🦄 You have been successfully logged in!', {
-                position: "bottom-center",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-            });
-        }).catch(error => {
-            setError(error.message);
-            setDisabled(false);
-        });
+        if (/^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[A-Za-z]+$/.test(email)) {
+            if (username.length > 3 && password.length > 5) {
+                props.firebase.doCreateUserWithEmailAndPassword(email, password).then(authUser => {
+                    return props.firebase.user(authUser.user.uid).set({
+                        username,
+                        email
+                    });
+                    this.props.history.push("/");
+                }).catch(error => {
+                    console.log("error");
+                    setError(error.message);
+                });
+            } else {
+
+            }
+        } else {
+            // Error email validation
+            setError("Please enter a valid email address.");
+        }
     };
 
     return (
@@ -99,13 +100,25 @@ function Login(props) {
 
                 {
                     error !== null &&
-                        <Alert severity="error">
-                            <AlertTitle>Error</AlertTitle>
-                            {error}
-                        </Alert>
+                    <Alert severity="error">
+                        <AlertTitle>Error</AlertTitle>
+                        {error}
+                    </Alert>
                 }
 
                 <form className={classes.form} noValidate onSubmit={onSubmit}>
+                    <TextField
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="email"
+                        label="Email"
+                        name="email"
+                        autoComplete="email"
+                        autoFocus
+                        onChange={onChangeHandler}
+                    />
                     <TextField
                         variant="outlined"
                         margin="normal"
@@ -116,7 +129,6 @@ function Login(props) {
                         name="username"
                         autoComplete="username"
                         autoFocus
-                        disabled={disabled}
                         onChange={onChangeHandler}
                     />
                     <TextField
@@ -129,12 +141,7 @@ function Login(props) {
                         type="password"
                         id="password"
                         autoComplete="current-password"
-                        disabled={disabled}
                         onChange={onChangeHandler}
-                    />
-                    <FormControlLabel
-                        control={<Checkbox value="remember" color="primary" />}
-                        label="Remember me"
                     />
                     <Button
                         type="submit"
@@ -142,9 +149,9 @@ function Login(props) {
                         variant="contained"
                         color="primary"
                         className={classes.submit}
-                        disabled={username === "" || password === "" || disabled === true}
+                        disabled={username === "" || password === "" || email === ""}
                     >
-                        Sign In
+                        Register
                     </Button>
                     <Grid container>
                         <Grid item xs>
@@ -153,8 +160,8 @@ function Login(props) {
                             </Link>
                         </Grid>
                         <Grid item>
-                            <Link href="/register" variant="body2">
-                                {"Don't have an account? Sign Up"}
+                            <Link href="/login" variant="body2">
+                                {"Already have an account? Sign In"}
                             </Link>
                         </Grid>
                     </Grid>
@@ -164,4 +171,5 @@ function Login(props) {
     )
 }
 
-export default withFirebase(Login);
+
+export default withFirebase(Register);
